@@ -1,0 +1,23 @@
+{
+  "name": "hyperdoc",
+  "version": "0.0.1",
+  "description": "p2p collaborative editing",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jarbus/hyperdoc.git"
+  },
+  "keywords": [
+    "p2p",
+    "collaboration"
+  ],
+  "author": "bois",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jarbus/hyperdoc/issues"
+  },
+  "homepage": "https://github.com/jarbus/hyperdoc#readme"
+}
