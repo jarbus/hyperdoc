@@ -16,10 +16,11 @@ const swarm = new Hyperswarm()
 // Setup corestore replication
 swarm.on('connection', function (connection){
     connection.on('data', function (data) {
-        console.log("Peer said:", data.toString())
+        // console.log("Peer said:", data.toString())
         // check if data starts with [peer]
         if (data.toString().startsWith("[peer]")) {
             core.append(data.toString())
+            console.error('[seed] UPDATE EDITOR HERE')
         }
         // core.append(data)
     })
@@ -40,12 +41,12 @@ while (core.length < 10000) {
   await core.append(Buffer.from('the next block of data. #' + core.length))
 }
 
-console.log('Core public key is:', core.key.toString('hex'))
+console.log("In another terminal, run:")
+console.log("node peer.js "+core.key.toString('hex'))
 
 
 process.stdin.on('keypress', (ch, key) => {
-  console.log('got "keypress"', ch, key);
-  console.log(core)
+  // console.log('got "keypress"', ch, key);
   core.append(Buffer.from('the next block of data. #' + core.length))
   if (key && key.ctrl && key.name == 'c') {
     console.log('ctrl+c was pressed');
