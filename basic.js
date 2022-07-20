@@ -62,7 +62,6 @@ beam.on('error', function (e) {
 
 beam.on('end', () => beam.end())
 
- /// Create the transform stream:
 var processData = new Transform({
   decodeStrings: false
 });
@@ -70,44 +69,27 @@ var processData = new Transform({
 processData._transform = function(chunk, encoding, done) {
     var data = chunk.toString()
     done(null, data)
-    // if (data !== "clear\n") {
-    //     done(null, data);
-    // }
-    // else {
-    //     done(null, '\u001B[2J\u001B[0;0f');
-    // }
 };
 
+var sharedKey = null
+var core = null
+var client = null
+var feed = null
 if (host) {
   console.log("this is a host")
-  var sharedKey = null
-  // Create a client that's connected to the "local" peer.
-  const localClient = new HyperspaceClient({
-    host: 'hyperspace-demo-1'
-  })
-
-
-  // Create a new RemoteCorestore.
-  const store = localClient.corestore()
-
-  // Create a fresh Remotehypercore.
-  const core = store.get({
-    valueEncoding: 'utf-8'
-  })
-
-  // Append two blocks to the RemoteHypercore.
+  const client = new HyperspaceClient({ host: 'hyperspace-demo-1' })
+  const store = client.corestore()
+  const core = store.get({ valueEncoding: 'utf-8' })
   await core.append(['hello', 'world'])
 
-  // Log when the core has any new peers.
   core.on('peer-add', () => {
     console.error('(local) Replicating with a new peer.')
   })
-
   core.on('append', () => {
     console.error(core)
   })
   // Start seeding the Hypercore on the Hyperswarm network.
-  localClient.replicate(core)
+  feed = client.replicate(core)
 
   sharedKey = core.key
 
@@ -122,48 +104,46 @@ if (host) {
   beam.write(core.key)
   console.error(core)
 } else {
-    // Create a client that's connected to the "remote" peer.
-    const remoteClient = new HyperspaceClient({
-      host: 'hyperspace-demo-2'
-    })
+  // Create a client that's connected to the "remote" peer.
+  const client = new HyperspaceClient({ host: 'hyperspace-demo-2' })
 
-    const store = remoteClient.corestore()
-    // Create a fresh Remotehypercore.
-    // TODO create remote core once key is received
-    const writableStream = new Writable();
-    var core = null
-    writableStream._write = (chunk, encoding, next) => {
-      // console.log(chunk.toString());
-      console.error("message received: " + chunk.toString());
+  const store = client.corestore()
 
+  const writableStream = new Writable();
+  console.error('read: '+ await beam.read())
+  writableStream._write = (chunk, encoding, next) => {
+    console.error("message received: " + chunk.toString());
 
-      if (core == null) {
-        core = store.get({
-          key: chunk,
-          live: true,
-          valueEncoding: 'utf-8'
-        })
-        console.error("replicating with remote core")
-        remoteClient.replicate(core)
+    if (core == null) {
+      core = store.get({
+        key: chunk,
+        live: true,
+        valueEncoding: 'utf-8'
+      })
+      console.error("replicating with remote core")
+      feed = client.replicate(core)
 
-        core.on('append', () => {
-            console.error(core)
-        })
-      }
-      console.error(core)
-      next()
-    };
+      core.on('append', () => {
+          console.error(core)
+      })
+      core.on('update', () => {
+          console.error(core)
+      })
+    }
+    feed.pipe(core)
+    console.error(core)
+    next()
+  };
 
-    console.log("this is a client")
-    beam.write('clear')
-    process.stdin.pipe(beam).pipe(writableStream)
-
+  console.log("this is a client")
+  beam.write('clear')
+  process.stdin.pipe(beam).pipe(writableStream)
 }
 
-// beam.write()
 if (typeof process.stdin.unref === 'function') process.stdin.unref()
 
 process.once('SIGINT', () => {
+  console.error(core)
   if (!beam.connected) closeASAP()
   else beam.end()
 })
